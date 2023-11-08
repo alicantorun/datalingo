@@ -43,7 +43,7 @@ SQL Response: {response}`;
 
   const model = new OpenAI({
     temperature: 0,
-    openAIApiKey: process.env.OPENAI_API_KEY,
+    openAIApiKey: "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",
     modelName: "gpt-3.5-turbo",
   });
 
@@ -128,7 +128,7 @@ export const runSqlDatabaseChain = async (input: string) => {
 
   const llm = new OpenAI({
     temperature: 0,
-    openAIApiKey: process.env.OPENAI_API_KEY,
+    openAIApiKey: "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",
     modelName: "gpt-3.5-turbo",
   });
 
@@ -243,7 +243,7 @@ export const runSqlAgent = async (input: string) => {
 
   const llm = new OpenAI({
     temperature: 0,
-    openAIApiKey: process.env.OPENAI_API_KEY,
+    openAIApiKey: "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",
     modelName: "gpt-3.5-turbo",
   });
 

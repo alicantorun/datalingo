@@ -1,6 +1,10 @@
 import { kv } from "@vercel/kv";
 import { Ratelimit } from "@upstash/ratelimit";
-import { Message as VercelChatMessage, StreamingTextResponse } from "ai";
+import {
+  Message as VercelChatMessage,
+  StreamingTextResponse,
+  experimental_StreamData,
+} from "ai";
 
 import { runSqlDatabaseChain, runQuerySql, runSqlAgent } from "../db/functions";
 import { PromptTemplate } from "langchain/prompts";
@@ -53,9 +57,7 @@ export async function POST(req: Request) {
   const currentMessageContent = messages[messages.length - 1].content;
   const prompt = PromptTemplate.fromTemplate(TEMPLATE);
 
-  const { response } = await runSqlAgent(currentMessageContent);
-
-  console.log(response);
+  const { response, sql } = await runSqlDatabaseChain(currentMessageContent);
 
   /**
    * Agent executors don't support streaming responses (yet!), so stream back the
@@ -72,6 +74,15 @@ export async function POST(req: Request) {
     },
   });
 
+  // Instantiate the StreamData. It works with all API providers.
+  const data = new experimental_StreamData();
+
+  data.append({
+    sql,
+  });
+
+  data.close();
+
   return new StreamingTextResponse(fakeStream);
-  // return Response.json({ response });
+  // return Response.json({ response, sql });
 }

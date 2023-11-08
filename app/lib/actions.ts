@@ -135,6 +135,8 @@ export async function authenticate(
   }
 }
 
+// CONNECTIONS
+
 const ConnectionSchema = z.object({
   id: z.string().uuid(),
   customer_id: z.string().uuid({
@@ -167,17 +169,6 @@ const CreateConnection = ConnectionSchema.omit({ id: true });
 
 export async function createConnection(prevState: State, formData: FormData) {
   const validatedFields = CreateConnection.safeParse({
-    customer_id: formData.get("customer_id"),
-    postgres_database: formData.get("postgres_database"),
-    postgres_host: formData.get("postgres_host"),
-    postgres_password: formData.get("postgres_password"),
-    postgres_prisma_url: formData.get("postgres_prisma_url"),
-    postgres_url: formData.get("postgres_url"),
-    postgres_url_non_pooling: formData.get("postgres_url_non_pooling"),
-    postgres_user: formData.get("postgres_user"),
-  });
-
-  console.log({
     customer_id: formData.get("customer_id"),
     postgres_database: formData.get("postgres_database"),
     postgres_host: formData.get("postgres_host"),
@@ -238,4 +229,14 @@ export async function createConnection(prevState: State, formData: FormData) {
 
   revalidatePath("/dashboard/connections");
   redirect("/dashboard/connections");
+}
+
+export async function deleteConnection(id: string) {
+  try {
+    await sql`DELETE FROM connections WHERE id = ${id}`;
+    revalidatePath("/dashboard/connections");
+    return { message: "Deleted Connection." };
+  } catch (error) {
+    return { message: "Database Error: Failed to Delete Invoice." };
+  }
 }

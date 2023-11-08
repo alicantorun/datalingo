@@ -1,5 +1,8 @@
 import Image from "next/image";
-// import { UpdateInvoice, DeleteInvoice } from '@/app/ui/connections/buttons';
+import {
+  UpdateConnection,
+  DeleteConnection,
+} from "@/app/ui/connections/buttons";
 // import InvoiceStatus from "@/app/ui/connections/status";
 // import { formatDateToLocal, formatCurrency } from "@/app/lib/utils";
 import { fetchFilteredConnections } from "@/app/lib/data";
@@ -122,8 +125,8 @@ export default async function InvoicesTable({
                   </td>
                   <td className="py-3 pl-6 pr-3">
                     <div className="flex justify-end gap-3">
-                      {/* <UpdateInvoice id={connection.id} />
-          <DeleteInvoice id={connection.id} /> */}
+                      <UpdateConnection id={connection.id.toString()} />
+                      <DeleteConnection id={connection.id.toString()} />
                     </div>
                   </td>
                 </tr>
