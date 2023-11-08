@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useChat } from "ai/react";
+import { useEffect, useRef, useState } from "react";
+import { Message, useChat } from "ai/react";
 import va from "@vercel/analytics";
 import clsx from "clsx";
 import { LoadingCircle, SendIcon } from "@/app/ui/icons";
@@ -22,6 +22,7 @@ export default function Chat() {
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
   const [code, setCode] = useState("// write your code here");
 
   const handleEditorChange = (value: string | undefined, event: any) => {
@@ -30,74 +31,114 @@ export default function Chat() {
     }
   };
 
-  const { messages, input, setInput, handleSubmit, isLoading } = useChat({
-    onResponse: (response) => {
-      if (response.status === 429) {
-        toast.error("You have reached your request limit for the day.");
-        va.track("Rate limited");
-        return;
-      } else {
-        va.track("Chat initiated");
-      }
-    },
-    onError: (error) => {
-      va.track("Chat errored", {
-        input,
-        error: error.message,
-      });
-    },
-  });
+  const { messages, input, setInput, handleSubmit, isLoading, setMessages } =
+    useChat({
+      onResponse: (response) => {
+        if (response.status === 429) {
+          toast.error("You have reached your request limit for the day.");
+          va.track("Rate limited");
+          return;
+        } else {
+          va.track("Chat initiated");
+        }
+      },
+      onError: (error) => {
+        va.track("Chat errored", {
+          input,
+          error: error.message,
+        });
+      },
+      onFinish: (message) => {
+        const newMessage = JSON.parse(message.content);
+
+        handleSetMessages({
+          ...message,
+          content: newMessage?.response,
+          sql: newMessage?.sql,
+        });
+      },
+    });
+
+  const handleSetMessages = (content: any) => {
+    setMessages((prevMessages: any) => {
+      const filteredMessages = prevMessages.filter(
+        (msg) => msg.id !== content.id
+      );
+
+      return [...filteredMessages, content];
+    });
+  };
 
   const disabled = isLoading || input.length === 0;
+
+  console.log(messages);
 
   return (
     <main>
       <div className="flex flex-col md:flex-row md:flex-wrap">
-        <div className="md:w-1/2 w-full">
+        <div className="w-full">
           <main className="flex flex-col items-center justify-between pb-40">
             {messages.length > 0 ? (
-              messages.map((message, i) => (
-                <div
-                  key={i}
-                  className={clsx(
-                    "flex w-full items-center justify-center border-b border-gray-200 py-8",
-                    message.role === "user" ? "bg-white" : "bg-gray-100"
-                  )}
-                >
-                  <div className="flex w-full max-w-screen-md items-start space-x-4 px-5 sm:px-0">
-                    <div
-                      className={clsx(
-                        "p-1.5 text-white",
-                        message.role === "assistant"
-                          ? "bg-green-500"
-                          : "bg-black"
-                      )}
-                    >
-                      {message.role === "user" ? (
-                        <User width={20} />
-                      ) : (
-                        <Bot width={20} />
-                      )}
+              messages.map((message, i) => {
+                console.log((message as any)?.sql);
+
+                return (
+                  <div
+                    key={i}
+                    className={clsx(
+                      "flex w-full items-center justify-center border-b border-gray-200 py-8",
+                      message.role === "user" ? "bg-white" : "bg-gray-100"
+                    )}
+                  >
+                    <div className="flex w-full max-w-screen-md items-start space-x-4 px-5 sm:px-0">
+                      <div
+                        className={clsx(
+                          "p-1.5 text-white",
+                          message.role === "assistant"
+                            ? "bg-green-500"
+                            : "bg-black"
+                        )}
+                      >
+                        {message.role === "user" ? (
+                          <User width={20} />
+                        ) : (
+                          <Bot width={20} />
+                        )}
+                      </div>
+                      <div className="flex flex-col w-full">
+                        <ReactMarkdown
+                          className="prose mt-1 w-full break-words prose-p:leading-relaxed"
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            // open links in new tab
+                            a: (props) => (
+                              <a
+                                {...props}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            ),
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                        {(message as any)?.sql && (
+                          <>
+                            <h1 className="mt-4">Query:</h1>
+                            <MonacoEditor
+                              height="100px"
+                              language="sql"
+                              theme="dark"
+                              code={(message as any)?.sql}
+                              onChange={handleEditorChange}
+                            />
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <ReactMarkdown
-                      className="prose mt-1 w-full break-words prose-p:leading-relaxed"
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        // open links in new tab
-                        a: (props) => (
-                          <a
-                            {...props}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          />
-                        ),
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="border-gray-200sm:mx-0 mx-5 mt-20 max-w-screen-md rounded-md border sm:w-full">
                 <div className="flex flex-col space-y-4 p-7 sm:p-10">
@@ -177,14 +218,14 @@ export default function Chat() {
             </div>
           </main>
         </div>
-        <div className="md:w-1/2 w-full">
+        {/* <div className="md:w-1/2 w-full">
           <MonacoEditor
             language="sql"
             theme="dark"
             code={code}
             onChange={handleEditorChange}
           />
-        </div>
+        </div> */}
         <div className="w-full">{/*  Footer if necessary */}</div>
       </div>
     </main>

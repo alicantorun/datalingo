@@ -5,6 +5,7 @@ import Editor, { OnChange } from "@monaco-editor/react";
 export interface MonacoEditorProps {
   language: string;
   theme: string;
+  height: string;
   code: string;
   onChange: (value: string, event: any) => void;
 }
@@ -14,10 +15,11 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   theme,
   code,
   onChange,
+  height,
 }) => {
   return (
     <Editor
-      height="90vh"
+      height={height}
       theme={theme}
       language={language}
       defaultValue={code}

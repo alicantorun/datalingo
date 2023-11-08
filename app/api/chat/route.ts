@@ -79,10 +79,13 @@ export async function POST(req: Request) {
 
   data.append({
     sql,
+    response,
   });
 
   data.close();
 
-  return new StreamingTextResponse(fakeStream);
-  // return Response.json({ response, sql });
+  console.log(sql, response);
+
+  // return new StreamingTextResponse(fakeStream, {}, data);
+  return Response.json({ response, sql });
 }
