@@ -12,6 +12,14 @@ export type State = {
     customerId?: string[];
     amount?: string[];
     status?: string[];
+    customer_id?: string[];
+    postgres_database?: string[];
+    postgres_host?: string[];
+    postgres_password?: string[];
+    postgres_prisma_url?: string[];
+    postgres_url?: string[];
+    postgres_url_non_pooling?: string[];
+    postgres_user?: string[];
   };
   message?: string | null;
 };
@@ -125,4 +133,109 @@ export async function authenticate(
     }
     throw error;
   }
+}
+
+const ConnectionSchema = z.object({
+  id: z.string().uuid(),
+  customer_id: z.string().uuid({
+    message: "Please select a customer.",
+  }),
+  postgres_url: z.string({
+    required_error: "Please enter a valid PostgreSQL URL.",
+  }),
+  postgres_prisma_url: z.string({
+    required_error: "Please enter a valid Prisma PostgreSQL URL.",
+  }),
+  postgres_url_non_pooling: z.string({
+    required_error: "Please enter a valid non-pooling PostgreSQL URL.",
+  }),
+  postgres_user: z.string({
+    required_error: "Please enter a PostgreSQL user.",
+  }),
+  postgres_host: z.string({
+    required_error: "Please enter a PostgreSQL host.",
+  }),
+  postgres_password: z.string({
+    required_error: "Please enter a PostgreSQL password.",
+  }),
+  postgres_database: z.string({
+    required_error: "Please enter a PostgreSQL database name.",
+  }),
+});
+
+const CreateConnection = ConnectionSchema.omit({ id: true });
+
+export async function createConnection(prevState: State, formData: FormData) {
+  const validatedFields = CreateConnection.safeParse({
+    customer_id: formData.get("customer_id"),
+    postgres_database: formData.get("postgres_database"),
+    postgres_host: formData.get("postgres_host"),
+    postgres_password: formData.get("postgres_password"),
+    postgres_prisma_url: formData.get("postgres_prisma_url"),
+    postgres_url: formData.get("postgres_url"),
+    postgres_url_non_pooling: formData.get("postgres_url_non_pooling"),
+    postgres_user: formData.get("postgres_user"),
+  });
+
+  console.log({
+    customer_id: formData.get("customer_id"),
+    postgres_database: formData.get("postgres_database"),
+    postgres_host: formData.get("postgres_host"),
+    postgres_password: formData.get("postgres_password"),
+    postgres_prisma_url: formData.get("postgres_prisma_url"),
+    postgres_url: formData.get("postgres_url"),
+    postgres_url_non_pooling: formData.get("postgres_url_non_pooling"),
+    postgres_user: formData.get("postgres_user"),
+  });
+
+  // If form validation fails, return errors early. Otherwise, continue.
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Missing Fields. Failed to Create Connection.",
+    };
+  }
+
+  // Prepare data for insertion into the database
+  const {
+    customer_id,
+    postgres_database,
+    postgres_host,
+    postgres_password,
+    postgres_prisma_url,
+    postgres_url,
+    postgres_url_non_pooling,
+    postgres_user,
+  } = validatedFields.data;
+
+  try {
+    await sql`
+    INSERT INTO connections (
+      customer_id,
+      postgres_database,
+      postgres_host,
+      postgres_password,
+      postgres_prisma_url,
+      postgres_url,
+      postgres_url_non_pooling,
+      postgres_user
+    ) VALUES (
+      ${customer_id},
+      ${postgres_database},
+      ${postgres_host},
+      ${postgres_password},
+      ${postgres_prisma_url},
+      ${postgres_url},
+      ${postgres_url_non_pooling},
+      ${postgres_user}
+    )
+  `;
+  } catch (error) {
+    return {
+      message: "Database Error: Failed to Create Connection.",
+    };
+  }
+
+  revalidatePath("/dashboard/connections");
+  redirect("/dashboard/connections");
 }

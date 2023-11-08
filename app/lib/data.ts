@@ -8,6 +8,7 @@ import {
   LatestInvoiceRaw,
   User,
   Revenue,
+  ConnectionsTable,
 } from "./definitions";
 import { formatCurrency } from "./utils";
 
@@ -131,29 +132,6 @@ export async function fetchFilteredInvoices(
   }
 }
 
-export async function fetchInvoicesPages(query: string) {
-  noStore();
-
-  try {
-    const count = await sql`SELECT COUNT(*)
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
-    WHERE
-      customers.name ILIKE ${`%${query}%`} OR
-      customers.email ILIKE ${`%${query}%`} OR
-      invoices.amount::text ILIKE ${`%${query}%`} OR
-      invoices.date::text ILIKE ${`%${query}%`} OR
-      invoices.status ILIKE ${`%${query}%`}
-  `;
-
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch total number of invoices.");
-  }
-}
-
 export async function fetchInvoiceById(id: string) {
   noStore();
 
@@ -200,6 +178,29 @@ export async function fetchCustomers() {
   }
 }
 
+export async function fetchInvoicesPages(query: string) {
+  noStore();
+
+  try {
+    const count = await sql`SELECT COUNT(*)
+    FROM invoices
+    JOIN customers ON invoices.customer_id = customers.id
+    WHERE
+      customers.name ILIKE ${`%${query}%`} OR
+      customers.email ILIKE ${`%${query}%`} OR
+      invoices.amount::text ILIKE ${`%${query}%`} OR
+      invoices.date::text ILIKE ${`%${query}%`} OR
+      invoices.status ILIKE ${`%${query}%`}
+  `;
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch total number of invoices.");
+  }
+}
+
 export async function fetchFilteredCustomers(query: string) {
   noStore();
 
@@ -242,5 +243,73 @@ export async function getUser(email: string) {
   } catch (error) {
     console.error("Failed to fetch user:", error);
     throw new Error("Failed to fetch user.");
+  }
+}
+
+export async function fetchConnectionsPages(query: string) {
+  noStore();
+
+  try {
+    // Assuming 'connections' table has a similar structure to 'invoices' and there's a 'customers' table
+    const count = await sql`SELECT COUNT(*)
+    FROM connections
+    JOIN customers ON connections.customer_id = customers.id
+    WHERE
+    customers.name ILIKE ${`%${query}%`} OR
+    customers.email ILIKE ${`%${query}%`} OR
+    connections.postgres_database ILIKE ${`%${query}%`} OR
+    connections.postgres_host ILIKE ${`%${query}%`} OR
+    connections.postgres_password ILIKE ${`%${query}%`} OR
+    connections.postgres_prisma_url ILIKE ${`%${query}%`} OR
+    connections.postgres_url ILIKE ${`%${query}%`} OR
+    connections.postgres_url_non_pooling ILIKE ${`%${query}%`} OR
+    connections.postgres_user ILIKE ${`%${query}%`}
+    `; // Add any other fields from connections that you need to filter by
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch total number of connections.");
+  }
+}
+
+export async function fetchFilteredConnections(
+  query: string,
+  currentPage: number
+) {
+  noStore();
+
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  try {
+    const connections = await sql<ConnectionsTable>`
+      SELECT
+        connections.id,
+        connections.postgres_url,
+        connections.postgres_prisma_url,
+        connections.postgres_url_non_pooling,
+        connections.postgres_user,
+        connections.postgres_host,
+        connections.postgres_password,
+        connections.postgres_database,
+        customers.name AS customer_name
+      FROM connections
+      JOIN customers ON connections.customer_id = customers.id
+      WHERE
+        connections.postgres_url ILIKE ${`%${query}%`} OR
+        connections.postgres_prisma_url ILIKE ${`%${query}%`} OR
+        connections.postgres_user ILIKE ${`%${query}%`} OR
+        connections.postgres_host ILIKE ${`%${query}%`} OR
+        connections.postgres_database ILIKE ${`%${query}%`} OR
+        customers.name ILIKE ${`%${query}%`}
+      ORDER BY connections.id
+      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
+    `;
+
+    return connections.rows;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch connections.");
   }
 }

@@ -86,3 +86,15 @@ export type InvoiceForm = {
   amount: number;
   status: "pending" | "paid";
 };
+
+export type ConnectionsTable = {
+  id: number; // Assuming `id` is a serial integer in PostgreSQL
+  customer_name: string; // Using string type for UUID
+  postgres_url: string;
+  postgres_prisma_url: string;
+  postgres_url_non_pooling: string;
+  postgres_user: string;
+  postgres_host: string;
+  postgres_password: string;
+  postgres_database: string;
+};

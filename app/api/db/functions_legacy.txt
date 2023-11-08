@@ -1,0 +1,266 @@
+import { OpenAI } from "langchain/llms/openai";
+import { SqlDatabase } from "langchain/sql_db";
+import { createSqlAgent, SqlToolkit } from "langchain/agents/toolkits/sql";
+import { DataSource } from "typeorm";
+import { PromptTemplate } from "langchain/prompts";
+import {
+  RunnablePassthrough,
+  RunnableSequence,
+} from "langchain/schema/runnable";
+import {
+  StringOutputParser,
+  BytesOutputParser,
+} from "langchain/schema/output_parser";
+import { StreamingTextResponse } from "ai";
+
+export const getDatasource = () =>
+  new DataSource({
+    type: "postgres", // type of the database
+    host: "ep-square-star-98504178-pooler.us-east-1.postgres.vercel-storage.com", // database host
+    port: 5432, // database host port
+    username: "default", // your database username
+    password: "BDO5onx1pZWG", // your database password
+    database: "verceldb", // your database name
+    synchronize: false, // in production you might want this to be false
+    logging: true, // set to true to enable logging
+    ssl: {
+      rejectUnauthorized: false, // if you have issues with certificate validation set this to false
+    },
+    entities: [
+      // list your entities here
+    ],
+    migrations: [
+      // list your migrations here
+    ],
+    subscribers: [
+      // list your subscribers here
+    ],
+  });
+
+export const run2 = async (input: string) => {
+  const datasource = getDatasource();
+
+  const db = await SqlDatabase.fromDataSourceParams({
+    appDataSource: datasource,
+  });
+
+  const model = new OpenAI({
+    temperature: 0,
+    openAIApiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const toolkit = new SqlToolkit(db, model);
+  const executor = createSqlAgent(model, toolkit);
+
+  console.log(`Executing with input "${input}"...`);
+
+  const result = await executor.call({ input });
+
+  console.log(`Got output ${result.output}`);
+
+  const logValue = `Got intermediate steps ${JSON.stringify(
+    result.intermediateSteps,
+    null,
+    2
+  )}`;
+
+  console.log(logValue);
+
+  await datasource.destroy();
+
+  /**
+   * Agent executors don't support streaming responses (yet!), so stream back the
+   * complete response one character at a time with a delay to simluate it.
+   */
+  const textEncoder = new TextEncoder();
+  const fakeStream = new ReadableStream({
+    async start(controller) {
+      for (const character of logValue) {
+        controller.enqueue(textEncoder.encode(character));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      controller.close();
+    },
+  });
+
+  return fakeStream;
+};
+
+export const run = async (input: string) => {
+  const datasource = getDatasource();
+
+  const db = await SqlDatabase.fromDataSourceParams({
+    appDataSource: datasource,
+  });
+
+  const prompt =
+    PromptTemplate.fromTemplate(`Based on the table schema below, write a SQL query that would answer the user's question:
+{schema}
+
+Question: {question}
+SQL Query:`);
+
+  const model = new OpenAI({
+    temperature: 0,
+    openAIApiKey: process.env.OPENAI_API_KEY,
+  });
+
+  // The `RunnablePassthrough.assign()` is used here to passthrough the input from the `.invoke()`
+  // call (in this example it's the question), along with any inputs passed to the `.assign()` method.
+  // In this case, we're passing the schema.
+  const sqlQueryGeneratorChain = RunnableSequence.from([
+    RunnablePassthrough.assign({
+      schema: async () => db.getTableInfo(),
+    }),
+    prompt,
+    model.bind({ stop: ["\nSQLResult:"] }),
+    new StringOutputParser(),
+  ]);
+
+  const result = await sqlQueryGeneratorChain.invoke({
+    question: input,
+  });
+
+  console.log({
+    result,
+  });
+
+  /*
+  {
+    result: "SELECT COUNT(EmployeeId) AS TotalEmployees FROM Employee"
+  }
+*/
+
+  const finalResponsePrompt =
+    PromptTemplate.fromTemplate(`Based on the table schema below, question, sql query, and sql response, write a natural language response:
+Important that if money coming is is greater than 5 it is good for business.
+{schema}
+
+Question: {question}
+SQL Query: {query}
+SQL Response: {response}`);
+
+  const fullChain = RunnableSequence.from([
+    RunnablePassthrough.assign({
+      query: sqlQueryGeneratorChain,
+    }),
+    {
+      schema: async () => db.getTableInfo(),
+      question: (input) => input.question,
+      query: (input) => input.query,
+      response: (input) => db.run(input.query),
+    },
+    finalResponsePrompt,
+    model,
+  ]);
+
+  const finalResponse = await fullChain.invoke({
+    question: input,
+  });
+
+  console.log(finalResponse);
+
+  /*
+  AIMessage {
+    content: 'There are 8 employees.',
+    additional_kwargs: { function_call: undefined }
+  }
+*/
+
+  await datasource.destroy();
+
+  /**
+   * Agent executors don't support streaming responses (yet!), so stream back the
+   * complete response one character at a time with a delay to simluate it.
+   */
+  const textEncoder = new TextEncoder();
+  const fakeStream = new ReadableStream({
+    async start(controller) {
+      for (const character of finalResponse) {
+        controller.enqueue(textEncoder.encode(character));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      controller.close();
+    },
+  });
+
+  return fakeStream;
+};
+
+export const run3 = async (input: string) => {
+  const datasource = getDatasource();
+
+  const db = await SqlDatabase.fromDataSourceParams({
+    appDataSource: datasource,
+  });
+
+  const model = new OpenAI({
+    temperature: 0,
+    openAIApiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const toolkit = new SqlToolkit(db);
+  const executor = createSqlAgent(model, toolkit);
+
+  // console.log(`Executing with input "${input}"...`);
+
+  const result = await executor.call({ input });
+
+  /**
+   * Agent executors don't support streaming responses (yet!), so stream back the
+   * complete response one character at a time with a delay to simluate it.
+   */
+  // const textEncoder = new TextEncoder();
+  // const fakeStream = new ReadableStream({
+  //   async start(controller) {
+  //     for (const character of result.output) {
+  //       controller.enqueue(textEncoder.encode(character));
+  //       await new Promise((resolve) => setTimeout(resolve, 20));
+  //     }
+  //     controller.close();
+  //   },
+  // });
+
+  // await datasource.destroy();
+
+  // result.intermediateSteps.forEach((step) => {
+  //   if (step.action.tool === "query-sql") {
+  //     response.prompt = prompt;
+  //     response.sqlQuery = step.action.toolInput;
+  //     response.sqlQuery = response.sqlQuery
+  //       .replace(/\\/g, "")
+  //       .replace(/"/g, "");
+  //     try {
+  //       const observation = JSON.parse(step.observation);
+  //       if (
+  //         Array.isArray(observation) &&
+  //         observation.every((obj) => typeof obj === "object")
+  //       ) {
+  //         response.result = observation;
+  //       }
+  //     } catch (error) {
+  //       // console.log(error);
+  //     }
+  //   }
+  // });
+
+  // return new StreamingTextResponse(fakeStream);
+
+  // console.log(`Got output ${result.output}`);
+
+  // console.log(
+  //   `Got intermediate steps ${JSON.stringify(
+  //     result.intermediateSteps,
+  //     null,
+  //     2
+  //   )}`
+  // );
+
+  await datasource.destroy();
+
+  return `Got intermediate steps ${JSON.stringify(
+    result.intermediateSteps,
+    null,
+    2
+  )}`;
+};

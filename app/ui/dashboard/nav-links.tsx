@@ -1,9 +1,10 @@
 "use client";
 
 import {
-  UserGroupIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
   HomeIcon,
   DocumentDuplicateIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,7 +19,16 @@ const links = [
     href: "/dashboard/invoices",
     icon: DocumentDuplicateIcon,
   },
-  { name: "Customers", href: "/dashboard/customers", icon: UserGroupIcon },
+  {
+    name: "Connections",
+    href: "/dashboard/connections",
+    icon: CircleStackIcon,
+  },
+  {
+    name: "Chats",
+    href: "/dashboard/chats",
+    icon: ChatBubbleOvalLeftEllipsisIcon,
+  },
 ];
 
 export default function NavLinks() {
