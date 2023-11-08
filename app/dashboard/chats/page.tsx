@@ -31,36 +31,49 @@ export default function Chat() {
     }
   };
 
-  const { messages, input, setInput, handleSubmit, isLoading, setMessages } =
-    useChat({
-      onResponse: (response) => {
-        if (response.status === 429) {
-          toast.error("You have reached your request limit for the day.");
-          va.track("Rate limited");
-          return;
-        } else {
-          va.track("Chat initiated");
-        }
-      },
-      onError: (error) => {
-        va.track("Chat errored", {
-          input,
-          error: error.message,
-        });
-      },
-      onFinish: (message) => {
-        const newMessage = JSON.parse(message.content);
+  const {
+    messages,
+    input,
+    setInput,
+    handleSubmit,
+    isLoading,
+    setMessages,
+  }: {
+    setMessages: any;
+    messages: any;
+    input: any;
+    setInput: any;
+    handleSubmit: any;
+    isLoading: any;
+  } = useChat({
+    onResponse: (response) => {
+      if (response.status === 429) {
+        toast.error("You have reached your request limit for the day.");
+        va.track("Rate limited");
+        return;
+      } else {
+        va.track("Chat initiated");
+      }
+    },
+    onError: (error) => {
+      va.track("Chat errored", {
+        input,
+        error: error.message,
+      });
+    },
+    onFinish: (message) => {
+      const newMessage = JSON.parse(message.content);
 
-        handleSetMessages({
-          ...message,
-          content: newMessage?.response,
-          sql: newMessage?.sql,
-        });
-      },
-    });
+      handleSetMessages({
+        ...message,
+        content: newMessage?.response,
+        sql: newMessage?.sql,
+      });
+    },
+  });
 
-  const handleSetMessages = (content: any) => {
-    setMessages((prevMessages: any) => {
+  const handleSetMessages = (content: any): void => {
+    setMessages((prevMessages: any[]): any[] => {
       const filteredMessages = prevMessages.filter(
         (msg) => msg.id !== content.id
       );
@@ -79,7 +92,7 @@ export default function Chat() {
         <div className="w-full">
           <main className="flex flex-col items-center justify-between pb-40">
             {messages.length > 0 ? (
-              messages.map((message, i) => {
+              messages.map((message: any, i: any) => {
                 console.log((message as any)?.sql);
 
                 return (
