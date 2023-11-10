@@ -1,3 +1,5 @@
+import { ChatCompletionCreateParams } from "openai/resources/chat/index";
+
 import { OpenAI } from "langchain/llms/openai";
 import { SqlDatabase } from "langchain/sql_db";
 import { createSqlAgent, SqlToolkit } from "langchain/agents/toolkits/sql";
@@ -266,3 +268,40 @@ export const runSqlAgent = async (input: string) => {
 
   return { response: finalResponse };
 };
+
+export const functions: ChatCompletionCreateParams.Function[] = [
+  {
+    name: "get_pie_chart",
+    description:
+      "Generates a pie chart based on provided data. Requires an array of labels and their corresponding data values. Optionally, you can specify colors for each pie section.",
+    parameters: {
+      type: "object",
+      properties: {
+        labels: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description: "An array of labels for each section of the pie chart.",
+        },
+        data: {
+          type: "array",
+          items: {
+            type: "number",
+          },
+          description:
+            "An array of numeric data values corresponding to each label. The values represent the size of each slice of the pie.",
+        },
+        colors: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description:
+            "An optional array of colors for each slice of the pie chart. Each color can be specified in any CSS-compatible format (like hex, rgb, etc.). If not provided, default colors will be used.",
+        },
+      },
+      required: ["labels", "data"],
+    },
+  },
+];
