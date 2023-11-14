@@ -23,7 +23,6 @@ import { DATA, chartAtom, boardSectionsAtom } from "./chartAtom";
 
 type ChatProps = {
     id: string;
-    // Define any other props here
 };
 
 export const Chat = (props: ChatProps) => {
@@ -77,21 +76,36 @@ export const Chat = (props: ChatProps) => {
         // sendExtraMessageFields: true,
 
         onFinish: (message) => {
+            console.log("message: ", message);
+
             setContext("");
 
             const newMessage = JSON.parse(message?.content);
 
             const newId = uuidv4();
 
-            handleSetMessages({
-                ...message,
-                content: newMessage?.response,
-                sql: newMessage?.sql,
-                function_call: {
-                    id: newId,
-                    name: newMessage?.function_call?.name,
-                    data: JSON.parse(newMessage?.function_call?.arguments),
-                },
+            setMessages((prevMessages: any[]): any[] => {
+                const filteredMessages = prevMessages.filter(
+                    (msg) => msg.id !== message.id
+                );
+
+                return [
+                    ...filteredMessages,
+                    {
+                        ...message,
+                        content: newMessage?.response,
+                        sql: newMessage?.sql,
+                        function_call: {
+                            id: newId,
+                            name: newMessage?.function_call?.name,
+                            data: newMessage?.function_call?.name
+                                ? JSON.parse(
+                                      newMessage?.function_call?.arguments
+                                  )
+                                : null,
+                        },
+                    },
+                ];
             });
 
             if (newMessage?.function_call?.name) {
@@ -111,26 +125,16 @@ export const Chat = (props: ChatProps) => {
         },
     });
 
-    const handleSetMessages = (content: any): void => {
-        setMessages((prevMessages: any[]): any[] => {
-            const filteredMessages = prevMessages.filter(
-                (msg) => msg.id !== content.id
-            );
-
-            return [...filteredMessages, content];
-        });
-    };
-
     const disabled = isLoading || input.length === 0;
 
     return (
         <div
-            className="flex flex-col items-center justify-between pb-40"
+            className="relative flex flex-col justify-start items-center  pb-40 h-full"
             ref={setNodeRef}
         >
-            <div className="flex flex-col h-full w-full">
+            <div className="flex flex-col  w-full">
                 <label>Context:</label>
-                <div className="border border-gray-200 bg-white px-4 pb-2 pt-3 shadow-lg sm:pb-3 sm:pt-4">
+                <div className="border border-gray-200 bg-white px-4 pb-2 pt-3 shadow-lg sm:pb-3 sm:pt-4 rounded-lg">
                     <textarea
                         className="w-full pr-10 outline-none border-none border-transparent focus:border-transparent focus:ring-0"
                         value={context}
@@ -141,7 +145,7 @@ export const Chat = (props: ChatProps) => {
             </div>
             {messages.length > 0 ? (
                 messages.map((message: any, i: any) => {
-                    // console.log((message as any)?.function_call.name);
+                    console.log(message.content);
 
                     return (
                         <div
@@ -183,11 +187,11 @@ export const Chat = (props: ChatProps) => {
                                             ),
                                         }}
                                     >
-                                        {!(message as any)?.function_call &&
-                                            message.content}
+                                        {(message as any) && message.content}
                                     </ReactMarkdown>
+
                                     {(message as any)?.sql && (
-                                        <>
+                                        <div className="mb-4">
                                             <h1 className="mt-4">Query:</h1>
                                             <MonacoEditor
                                                 height="100px"
@@ -196,8 +200,9 @@ export const Chat = (props: ChatProps) => {
                                                 code={(message as any)?.sql}
                                                 onChange={handleEditorChange}
                                             />
-                                        </>
+                                        </div>
                                     )}
+
                                     {(message as any)?.function_call && (
                                         <SortableTaskItem
                                             id={
@@ -221,7 +226,7 @@ export const Chat = (props: ChatProps) => {
             ) : (
                 <ChatPlaceholder setInput={setInput} />
             )}
-            <div className="fixed bottom-0 flex w-full flex-col items-center space-y-3  p-5 pb-3 sm:px-0">
+            <div className="absolute bottom-0 w-full flex flex-col items-center ">
                 <form
                     ref={formRef}
                     onSubmit={(e) =>

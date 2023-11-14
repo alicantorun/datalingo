@@ -56,10 +56,11 @@ BEFORE ANSWER IMPORTANT CONTEXT: {context}
 
 export async function POST(req: Request) {
     const body = await req.json();
+    const currentChart = body.chart ?? "";
 
-    // console.log(body);
     const messages = body.messages ?? [];
     const currentContext = body.context ?? "";
+
     const formattedPreviousMessages = messages.slice(0, -1).map(formatMessage);
     const currentMessageContent = messages[messages.length - 1].content;
     const prompt = PromptTemplate.fromTemplate(TEMPLATE);
@@ -68,14 +69,12 @@ export async function POST(req: Request) {
 
     const { globalString }: any = await generateTableInfoFromTables(sqlTables);
 
-    // console.log(body);
-    // return Response.json({});
-
     const llm = new ChatOpenAI({
         temperature: 0,
         openAIApiKey: process.env.OPENAI_API_KEY,
         modelName: "gpt-3.5-turbo",
         // modelName: "gpt-4-0613",
+        // verbose: true,
     });
 
     const sqlQueryChain = RunnableSequence.from([
@@ -149,13 +148,12 @@ export async function POST(req: Request) {
                 return { ...input, fullPrompt };
             },
         },
-
         finalResponsePrompt,
-        // llm.bind({
-        //     functions,
-        // function_call: { name: "get_pie_chart" },
-        // }),
-        llm,
+        llm.bind({
+            functions,
+            // function_call: { name: "get_pie_chart" },
+        }),
+        // llm,
         new StringOutputParser(),
     ]);
 
@@ -164,7 +162,19 @@ export async function POST(req: Request) {
         context: currentContext,
     });
 
-    console.log(finalResponse);
+    const { additional_kwargs } = await runFunctionCallingWithOpenAI(
+        finalResponse + " get pie chart"
+    );
 
-    return Response.json({ response: finalResponse, sql });
+    console.log({
+        response: finalResponse,
+        sql,
+        function_call: additional_kwargs,
+    });
+
+    return Response.json({
+        response: finalResponse,
+        sql,
+        function_call: additional_kwargs,
+    });
 }
