@@ -1,246 +1,278 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Message, useChat } from "ai/react";
-import va from "@vercel/analytics";
-import clsx from "clsx";
-import { LoadingCircle, SendIcon } from "@/app/ui/icons";
-import { Bot, User } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import Textarea from "react-textarea-autosize";
-import { toast } from "sonner";
-import MonacoEditor from "@/app/ui/monaco-editor/editor";
+import React, { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 
-const examples = [
-  "How many customers with active status are currently listed in our database?",
-  "What is the total amount of all pending invoices recorded in our database?",
-  "Which customer in our database has an invoice with a pending status?",
-];
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  useDroppable,
+  useDraggable,
+  closestCorners,
+  DragStartEvent,
+  DragOverEvent,
+  DropAnimation,
+  defaultDropAnimation,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
-export default function Chat() {
-  const formRef = useRef<HTMLFormElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ChartComponent } from "./chart";
+import { Chat } from "./chat";
+import { SortableTaskItem } from "./sortable-task-item";
 
-  const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
-  const [code, setCode] = useState("// write your code here");
+import { useAtom } from "jotai";
+import { boardSectionsAtom, chartAtom } from "./chartAtom";
 
-  const handleEditorChange = (value: string | undefined, event: any) => {
-    if (value !== undefined) {
-      setCode(value);
-    }
+export default function Page() {
+  const [charts] = useAtom(chartAtom);
+  const initialBoardSections = initializeBoard(charts);
+
+  const [boardSections, setBoardSections] = useAtom(boardSectionsAtom);
+
+  useEffect(() => {
+    setBoardSections(initialBoardSections);
+  }, []);
+
+  const [activeChartId, setActiveChartId] = useState<null | string>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragStart = ({ active }: DragStartEvent) => {
+    setActiveChartId(active.id as string);
   };
 
-  const {
-    messages,
-    input,
-    setInput,
-    handleSubmit,
-    isLoading,
-    setMessages,
-  }: {
-    setMessages: any;
-    messages: any;
-    input: any;
-    setInput: any;
-    handleSubmit: any;
-    isLoading: any;
-  } = useChat({
-    onResponse: (response) => {
-      if (response.status === 429) {
-        toast.error("You have reached your request limit for the day.");
-        va.track("Rate limited");
-        return;
-      } else {
-        va.track("Chat initiated");
-      }
-    },
-    onError: (error) => {
-      va.track("Chat errored", {
-        input,
-        error: error.message,
-      });
-    },
-    onFinish: (message) => {
-      const newMessage = JSON.parse(message.content);
+  const handleDragOver = ({ active, over }: DragOverEvent) => {
+    // Find the containers
+    const activeContainer = findBoardSectionContainer(
+      boardSections,
+      active.id as string
+    );
 
-      handleSetMessages({
-        ...message,
-        content: newMessage?.response,
-        sql: newMessage?.sql,
-      });
-    },
-  });
+    const overContainer = findBoardSectionContainer(
+      boardSections,
+      over?.id as string
+    );
 
-  const handleSetMessages = (content: any): void => {
-    setMessages((prevMessages: any[]): any[] => {
-      const filteredMessages = prevMessages.filter(
-        (msg) => msg.id !== content.id
+    if (
+      !activeContainer ||
+      !overContainer ||
+      activeContainer === overContainer
+    ) {
+      return;
+    }
+
+    setBoardSections((boardSection) => {
+      const activeItems = boardSection[activeContainer];
+      const overItems = boardSection[overContainer];
+
+      // Find the indexes for the items
+      const activeIndex = activeItems.findIndex(
+        (item) => item.id === active.id
       );
+      const overIndex = overItems.findIndex((item) => item.id !== over?.id);
 
-      return [...filteredMessages, content];
+      return {
+        ...boardSection,
+        [activeContainer]: [
+          ...boardSection[activeContainer].filter(
+            (item) => item.id !== active.id
+          ),
+        ],
+        [overContainer]: [
+          ...boardSection[overContainer].slice(0, overIndex),
+          boardSections[activeContainer][activeIndex],
+          ...boardSection[overContainer].slice(
+            overIndex,
+            boardSection[overContainer].length
+          ),
+        ],
+      };
     });
   };
 
-  const disabled = isLoading || input.length === 0;
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    const activeContainer = findBoardSectionContainer(
+      boardSections,
+      active.id as string
+    );
+    const overContainer = findBoardSectionContainer(
+      boardSections,
+      over?.id as string
+    );
 
-  console.log(messages);
+    if (
+      !activeContainer ||
+      !overContainer ||
+      activeContainer !== overContainer
+    ) {
+      return;
+    }
+
+    const activeIndex = boardSections[activeContainer].findIndex(
+      (chart) => chart.id === active.id
+    );
+    const overIndex = boardSections[overContainer].findIndex(
+      (chart) => chart.id === over?.id
+    );
+
+    if (activeIndex !== overIndex) {
+      setBoardSections((boardSection) => ({
+        ...boardSection,
+        [overContainer]: arrayMove(
+          boardSection[overContainer],
+          activeIndex,
+          overIndex
+        ),
+      }));
+    }
+
+    setActiveChartId(null);
+  };
+
+  const chart = activeChartId ? getChartById(charts, activeChartId) : null;
+
+  console.log(boardSections);
 
   return (
-    <main>
-      <div className="flex flex-col md:flex-row md:flex-wrap">
-        <div className="w-full">
-          <main className="flex flex-col items-center justify-between pb-40">
-            {messages.length > 0 ? (
-              messages.map((message: any, i: any) => {
-                console.log((message as any)?.sql);
-
-                return (
-                  <div
-                    key={i}
-                    className={clsx(
-                      "flex w-full items-center justify-center border-b border-gray-200 py-8",
-                      message.role === "user" ? "bg-white" : "bg-gray-100"
-                    )}
-                  >
-                    <div className="flex w-full max-w-screen-md items-start space-x-4 px-5 sm:px-0">
-                      <div
-                        className={clsx(
-                          "p-1.5 text-white",
-                          message.role === "assistant"
-                            ? "bg-green-500"
-                            : "bg-black"
-                        )}
-                      >
-                        {message.role === "user" ? (
-                          <User width={20} />
-                        ) : (
-                          <Bot width={20} />
-                        )}
-                      </div>
-                      <div className="flex flex-col w-full">
-                        <ReactMarkdown
-                          className="prose mt-1 w-full break-words prose-p:leading-relaxed"
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            // open links in new tab
-                            a: (props) => (
-                              <a
-                                {...props}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              />
-                            ),
-                          }}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
-                        {(message as any)?.sql && (
-                          <>
-                            <h1 className="mt-4">Query:</h1>
-                            <MonacoEditor
-                              height="100px"
-                              language="sql"
-                              theme="dark"
-                              code={(message as any)?.sql}
-                              onChange={handleEditorChange}
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="border-gray-200sm:mx-0 mx-5 mt-20 max-w-screen-md rounded-md border sm:w-full">
-                <div className="flex flex-col space-y-4 p-7 sm:p-10">
-                  <h1 className="text-lg font-semibold text-black">
-                    Welcome to your personal Wyzard.ai AI Data Assistant
-                    Chatbot!
-                  </h1>
-                  <p className="text-gray-500">
-                    Feel free to ask questions and explore insights...
-                    <br />
-                    You can begin by typing your query below or consider using
-                    one of these examples to get started: with natural language.
-                  </p>
-                </div>
-                <div className="flex flex-col space-y-4 border-t border-gray-200 bg-gray-50 p-7 sm:p-10">
-                  {examples.map((example, i) => (
-                    <button
-                      key={i}
-                      className="rounded-md border border-gray-200 bg-white px-5 py-3 text-left text-sm text-gray-500 transition-all duration-75 hover:border-black hover:text-gray-700 active:bg-gray-50"
-                      onClick={() => {
-                        setInput(example);
-                        inputRef.current?.focus();
-                      }}
-                    >
-                      {example}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="fixed bottom-0 flex w-full flex-col items-center space-y-3  p-5 pb-3 sm:px-0">
-              <form
-                ref={formRef}
-                onSubmit={handleSubmit}
-                className="relative w-full max-w-screen-md rounded-xl border border-gray-200 bg-white px-4 pb-2 pt-3 shadow-lg sm:pb-3 sm:pt-4"
-              >
-                <Textarea
-                  ref={inputRef}
-                  tabIndex={0}
-                  required
-                  rows={1}
-                  autoFocus
-                  placeholder="Send a message"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      formRef.current?.requestSubmit();
-                      e.preventDefault();
-                    }
-                  }}
-                  spellCheck={false}
-                  className="w-full pr-10 outline-none border-none border-transparent focus:border-transparent focus:ring-0"
-                />
-                <button
-                  className={clsx(
-                    "absolute inset-y-0 right-3 my-auto flex h-8 w-8 items-center justify-center rounded-md transition-all",
-                    disabled
-                      ? "cursor-not-allowed bg-white"
-                      : "bg-green-500 hover:bg-green-600"
-                  )}
-                  disabled={disabled}
-                >
-                  {isLoading ? (
-                    <LoadingCircle />
-                  ) : (
-                    <SendIcon
-                      className={clsx(
-                        "h-4 w-4",
-                        input.length === 0 ? "text-gray-300" : "text-white"
-                      )}
-                    />
-                  )}
-                </button>
-              </form>
-              <span className="h-5" />
+    <div className="container mx-auto p-4">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="grid grid-cols-3 gap-4">
+          {Object.keys(boardSections).map((boardSectionKey, i) => (
+            <div className="col-span-1" key={boardSectionKey}>
+              <BoardSection
+                isChat={i === 2}
+                id={boardSectionKey}
+                title={boardSectionKey}
+                charts={boardSections[boardSectionKey]}
+              />
             </div>
-          </main>
+          ))}
+          <DragOverlay>
+            {chart ? <TaskItem data={chart} /> : <TaskItem data={charts} />}
+          </DragOverlay>
         </div>
-        {/* <div className="md:w-1/2 w-full">
-          <MonacoEditor
-            language="sql"
-            theme="dark"
-            code={code}
-            onChange={handleEditorChange}
-          />
-        </div> */}
-        <div className="w-full">{/*  Footer if necessary */}</div>
-      </div>
-    </main>
+      </DndContext>
+    </div>
   );
 }
+
+export type Section = "chat" | "dashboard";
+
+export type Chart = {
+  id: string;
+  name: string;
+  data: any;
+  section?: string;
+};
+
+export type BoardSectionsType = {
+  [name: string]: Chart[];
+};
+
+export const initializeBoard = (charts: Chart[]) => {
+  const boardSections: BoardSectionsType = {};
+
+  Object.keys(BOARD_SECTIONS).forEach((boardSectionKey) => {
+    boardSections[boardSectionKey] = getChartsBySection(
+      charts,
+      boardSectionKey as Section
+    );
+  });
+
+  return boardSections;
+};
+
+export const findBoardSectionContainer = (
+  boardSections: BoardSectionsType,
+  id: string
+) => {
+  if (id in boardSections) {
+    return id;
+  }
+
+  const container = Object.keys(boardSections).find((key) =>
+    boardSections[key].find((item) => item.id === id)
+  );
+
+  return container;
+};
+
+export const BOARD_SECTIONS = {
+  dashboard: "dashboard",
+  demo: "demo",
+  chat: "chat",
+};
+
+export const getChartsBySection = (charts: Chart[], section: Section) => {
+  return charts.filter((chart) => chart.section === section);
+};
+
+export const getChartById = (charts: Chart[], id: string) => {
+  return charts.find((chart) => chart.id === id);
+};
+
+export const BoardSection = ({
+  id,
+  title,
+  charts,
+  isChat,
+}: {
+  id: string;
+  title: string;
+  charts: Chart[];
+  isChat: boolean;
+}) => {
+  const { setNodeRef } = useDroppable({
+    id,
+  });
+
+  if (isChat) return <Chat id={id} />;
+
+  return (
+    <div className="p-2">
+      {/* <h6 className="text-lg font-semibold mb-2">{title}</h6> */}
+      <SortableContext
+        id={id}
+        items={charts}
+        strategy={verticalListSortingStrategy}
+      >
+        <div ref={setNodeRef}>
+          {charts.map((chart) => (
+            <div key={chart.id} className="mb-2">
+              <SortableTaskItem id={chart.id}>
+                <TaskItem data={chart} />
+              </SortableTaskItem>
+            </div>
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  );
+};
+
+const TaskItem = ({ data }: { data: any }) => {
+  return <ChartComponent data={data} />;
+};
