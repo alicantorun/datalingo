@@ -50,7 +50,7 @@ export default async function Page({
                     <h1 className={`${lusitana.className} text-2xl mt-4`}>
                         Schema
                     </h1>
-                    <CreateSchema email={session?.user?.email} />
+                    <CreateSchema email={session?.user?.email ?? ""} />
                 </div>
                 {/* {JSON.stringify(schema)} */}
                 <DataParser dataString={schema} />
