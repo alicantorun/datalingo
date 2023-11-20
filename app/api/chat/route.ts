@@ -32,26 +32,41 @@ const formatMessage = (message: VercelChatMessage) => {
 
 const TEMPLATE = `Based on the provided SQL table schema below, write a SQL query that would answer the user's question.
 ------------
-SCHEMA: {schema}
+DATABASE SCHEMA:
+{schema}
 ------------
-QUESTION: {question}
+QUESTION:
+{question}
 ------------
-BEFORE ANSWER IMPORTANT CONTEXT: {context}
+CONTEXT:
+{context}
+------------
+CONTEXT EXPLANATION:
+If your question relates to specific tables or columns in the schema, you can provide additional context using the 'context' parameter. For example, if you're inquiring about user-related data but need to consider specific permissions, you can specify which columns or tables should be accessed based on the context provided.
 ------------
 SQL QUERY:`;
 
 const FINAL_RESPONSE_TEMPLATE = `Based on the table schema below, question, SQL query, and SQL response, write a natural language response:
 ------------
-SCHEMA: {schema}
+DATABASE SCHEMA:
+{schema}
 ------------
-QUESTION: {question}
+QUESTION:
+{question}
 ------------
-SQL QUERY: {query}
+SQL QUERY:
+{query}
 ------------
-SQL RESPONSE: {response}
+SQL RESPONSE:
+{response}
 ------------
-NATURAL LANGUAGE RESPONSE:
-BEFORE ANSWER IMPORTANT CONTEXT: {context}
+CONTEXT:
+{context}
+------------
+CONTEXT EXPLANATION:
+If your question relates to specific tables or columns in the schema, you can provide additional context using the 'context' parameter. For example, if you're inquiring about user-related data but need to consider specific permissions, you can specify which columns or tables should be accessed based on the context provided.
+------------
+YOUR EXPLANATION:
 `;
 
 export async function POST(req: Request) {
@@ -72,9 +87,9 @@ export async function POST(req: Request) {
     const llm = new ChatOpenAI({
         temperature: 0,
         openAIApiKey: process.env.OPENAI_API_KEY,
-        modelName: "gpt-3.5-turbo",
-        // modelName: "gpt-4-0613",
-        // verbose: true,
+        // modelName: "gpt-3.5-turbo",
+        modelName: "gpt-4-0613",
+        verbose: true,
     });
 
     const sqlQueryChain = RunnableSequence.from([

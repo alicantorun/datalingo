@@ -1,6 +1,7 @@
 import { sql } from "@vercel/postgres";
 import { PromptTemplate } from "langchain/prompts";
 import { unstable_noStore as noStore } from "next/cache";
+import { type Pool } from "pg";
 
 const formatToSqlTable = (rawResultsTableAndColumn: any) => {
     const sqlTables: any[] = [];
@@ -51,15 +52,35 @@ export const getTableAndColumnsName = async () => {
     }
 };
 
+export const getTableAndColumnsNameFromConnection = async (pool: Pool) => {
+    try {
+        const data = await pool.query(`SELECT 
+            t.table_name, 
+            c.* 
+          FROM 
+            information_schema.tables t 
+              JOIN information_schema.columns c 
+                ON t.table_name = c.table_name 
+          WHERE 
+            t.table_schema = 'public' 
+              AND c.table_schema = 'public' 
+          ORDER BY 
+            t.table_name,
+            c.ordinal_position;`);
+
+        const { sqlTables } = formatToSqlTable(data.rows);
+
+        return { sqlTables };
+    } catch (error: any) {
+        throw new Error("Database type not implemented yet", error);
+    }
+};
+
 export const generateTableInfoFromTables = async (
     tables: any,
     customDescription = "",
     sampleRowsInTableInfo = 3
 ) => {
-    if (!tables) {
-        return "";
-    }
-
     let globalString = "";
 
     for (const currentTable of tables) {

@@ -7,39 +7,45 @@ export const DATA = {
     data: {
         data: [
             {
-                name: "New York",
-                value: 9800,
+                month: "April",
+                Germany: 300, // Number of orders shipped to Germany in April
+                Italy: 250, // Number of orders shipped to Italy in April
             },
             {
-                name: "London",
-                value: 4567,
+                month: "May",
+                Germany: 350, // Number of orders shipped to Germany in May
+                Italy: 300, // Number of orders shipped to Italy in May
             },
             {
-                name: "Hong Kong",
-                value: 3908,
+                month: "June",
+                Germany: 400, // Number of orders shipped to Germany in June
+                Italy: 350, // Number of orders shipped to Italy in June
             },
             {
-                name: "San Francisco",
-                value: 2400,
+                month: "July",
+                Germany: 450, // Number of orders shipped to Germany in July
+                Italy: 400, // Number of orders shipped to Italy in July
             },
             {
-                name: "Singapore",
-                value: 1908,
+                month: "August",
+                Germany: 500, // Number of orders shipped to Germany in August
+                Italy: 450, // Number of orders shipped to Italy in August
             },
             {
-                name: "Zurich",
-                value: 1398,
+                month: "September",
+                Germany: 550, // Number of orders shipped to Germany in September
+                Italy: 500, // Number of orders shipped to Italy in September
             },
         ],
     },
 };
 
 const INITIAL_CHARTS: any[] = [
-    // {
-    //   id: uuidv4(),
-    //   ...DATA,
-    //   section: "dashboard",
-    // },
+    {
+        id: uuidv4(),
+        ...DATA,
+        section: "dashboard",
+    },
     // {
     //   id: uuidv4(),
     //   ...DATA,
