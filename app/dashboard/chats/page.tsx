@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { ChartData } from "./chartAtom";
 
 import {
     DndContext,
@@ -26,20 +26,22 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { ChartComponent } from "./chart";
 import { Chat } from "./chat";
 import { SortableTaskItem } from "./sortable-task-item";
 
 import { useAtom } from "jotai";
-import { boardSectionsAtom, chartAtom } from "./chartAtom";
+import {
+    BoardSectionsChart,
+    Section,
+    boardSectionsAtom,
+    chartAtom,
+} from "./chartAtom";
 
 export default function Page() {
     const [charts] = useAtom(chartAtom);
-    const initialBoardSections = initializeBoard(charts);
-
     const [boardSections, setBoardSections] = useAtom(boardSectionsAtom);
+    const initialBoardSections = initializeBoard(charts);
 
     useEffect(() => {
         setBoardSections(initialBoardSections);
@@ -59,12 +61,10 @@ export default function Page() {
     };
 
     const handleDragOver = ({ active, over }: DragOverEvent) => {
-        // Find the containers
         const activeContainer = findBoardSectionContainer(
             boardSections,
             active.id as string
         );
-
         const overContainer = findBoardSectionContainer(
             boardSections,
             over?.id as string
@@ -81,34 +81,32 @@ export default function Page() {
         setBoardSections((boardSection) => {
             const activeItems = boardSection[activeContainer];
             const overItems = boardSection[overContainer];
-
-            // Find the indexes for the items
             const activeIndex = activeItems.findIndex(
                 (item) => item.id === active.id
             );
             const overIndex = overItems.findIndex(
-                (item) => item.id !== over?.id
+                (item) => item.id === over?.id
             );
+
+            let newActiveItems = [...activeItems];
+            let newOverItems = [...overItems];
+
+            // Create a new object with updated section property
+            const itemWithNewSection = {
+                ...newActiveItems[activeIndex],
+                section: overContainer as Section,
+            };
+
+            newActiveItems.splice(activeIndex, 1);
+            newOverItems.splice(overIndex, 0, itemWithNewSection);
 
             return {
                 ...boardSection,
-                [activeContainer]: [
-                    ...boardSection[activeContainer].filter(
-                        (item) => item.id !== active.id
-                    ),
-                ],
-                [overContainer]: [
-                    ...boardSection[overContainer].slice(0, overIndex),
-                    boardSections[activeContainer][activeIndex],
-                    ...boardSection[overContainer].slice(
-                        overIndex,
-                        boardSection[overContainer].length
-                    ),
-                ],
+                [activeContainer]: newActiveItems,
+                [overContainer]: newOverItems,
             };
         });
     };
-
     const handleDragEnd = ({ active, over }: DragEndEvent) => {
         const activeContainer = findBoardSectionContainer(
             boardSections,
@@ -150,7 +148,8 @@ export default function Page() {
 
     const chart = activeChartId ? getChartById(charts, activeChartId) : null;
 
-    // console.log(boardSections);
+    console.log(boardSections);
+    console.log(charts);
 
     return (
         <div className="h-full mx-auto p-4">
@@ -177,7 +176,7 @@ export default function Page() {
                         {chart ? (
                             <TaskItem data={chart} />
                         ) : (
-                            <TaskItem data={charts} />
+                            <>No chart found</>
                         )}
                     </DragOverlay>
                 </div>
@@ -186,20 +185,11 @@ export default function Page() {
     );
 }
 
-type Section = "chat" | "dashboard";
-
-type Chart = {
-    id: string;
-    name: string;
-    data: any;
-    section?: string;
-};
-
 type BoardSectionsType = {
-    [name: string]: Chart[];
+    [name: string]: BoardSectionsChart[];
 };
 
-const initializeBoard = (charts: Chart[]) => {
+const initializeBoard = (charts: BoardSectionsChart[]) => {
     const boardSections: BoardSectionsType = {};
 
     Object.keys(BOARD_SECTIONS).forEach((boardSectionKey) => {
@@ -233,11 +223,11 @@ const BOARD_SECTIONS = {
     chat: "chat",
 };
 
-const getChartsBySection = (charts: Chart[], section: Section) => {
+const getChartsBySection = (charts: BoardSectionsChart[], section: Section) => {
     return charts.filter((chart) => chart.section === section);
 };
 
-const getChartById = (charts: Chart[], id: string) => {
+const getChartById = (charts: BoardSectionsChart[], id: string) => {
     return charts.find((chart) => chart.id === id);
 };
 
@@ -249,7 +239,7 @@ const BoardSection = ({
 }: {
     id: string;
     title: string;
-    charts: Chart[];
+    charts: BoardSectionsChart[];
     isChat: boolean;
 }) => {
     const { setNodeRef } = useDroppable({
@@ -267,19 +257,23 @@ const BoardSection = ({
                 strategy={verticalListSortingStrategy}
             >
                 <div ref={setNodeRef}>
-                    {charts.map((chart) => (
-                        <div key={chart.id} className="mb-2">
-                            <SortableTaskItem id={chart.id}>
-                                <TaskItem data={chart} />
-                            </SortableTaskItem>
-                        </div>
-                    ))}
+                    {charts.map((chart) => {
+                        console.log("chart: ", chart);
+
+                        return (
+                            <div key={chart.id} className="mb-2">
+                                <SortableTaskItem id={chart.id}>
+                                    <TaskItem data={chart} />
+                                </SortableTaskItem>
+                            </div>
+                        );
+                    })}
                 </div>
             </SortableContext>
         </div>
     );
 };
 
-const TaskItem = ({ data }: { data: any }) => {
+const TaskItem = ({ data }: { data: ChartData }) => {
     return <ChartComponent data={data} />;
 };

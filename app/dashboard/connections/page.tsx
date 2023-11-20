@@ -52,7 +52,6 @@ export default async function Page({
                     </h1>
                     <CreateSchema email={session?.user?.email ?? ""} />
                 </div>
-                {/* {JSON.stringify(schema)} */}
                 <DataParser dataString={schema} />
             </div>
             <div className="mt-5 flex w-full justify-center">

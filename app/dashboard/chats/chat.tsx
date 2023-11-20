@@ -19,7 +19,7 @@ import { ChartComponent } from "./chart";
 import { ChatPlaceholder } from "./chat-placeholder";
 import { SortableTaskItem } from "./sortable-task-item";
 import { useAtom } from "jotai";
-import { DATA, chartAtom, boardSectionsAtom } from "./chartAtom";
+import { DATA, chartAtom, boardSectionsAtom, ChartData } from "./chartAtom";
 
 type ChatProps = {
     id: string;
@@ -78,13 +78,9 @@ export const Chat = (props: ChatProps) => {
         onFinish: (message) => {
             setContext("");
 
-            // if message.content === typeof string
-
             const newMessage = JSON.parse(message?.content);
 
-            console.log("newMessage: ", newMessage);
-
-            const newId = uuidv4();
+            // const newId = uuidv4();
 
             const getChartProperty = (newMessage: any) => {
                 if (newMessage?.response?.result?.bar_chart) {
@@ -92,6 +88,7 @@ export const Chat = (props: ChatProps) => {
                         chart: {
                             ...newMessage.response.result.bar_chart,
                             name: "get_bar_chart",
+                            id: message.id,
                         },
                     };
                 } else if (newMessage?.response?.result?.pie_chart) {
@@ -99,6 +96,7 @@ export const Chat = (props: ChatProps) => {
                         chart: {
                             ...newMessage.response.result.pie_chart,
                             name: "get_pie_chart",
+                            id: message.id,
                         },
                     };
                 } else if (newMessage?.response?.result?.line_chart) {
@@ -106,32 +104,33 @@ export const Chat = (props: ChatProps) => {
                         chart: {
                             ...newMessage.response.result.line_chart,
                             name: "get_line_chart",
+                            id: message.id,
                         },
                     };
                 }
                 return {}; // Return an empty object if none of the properties are found
             };
 
-            const getChartObject = (newMessage: any, newId: string) => {
+            const getChartObject = (newMessage: any) => {
                 if (newMessage?.response?.result?.bar_chart) {
                     return {
-                        id: newId,
+                        id: message.id,
                         name: "get_bar_chart",
-                        data: newMessage.response.result.bar_chart.chartdata,
+                        chart: newMessage.response.result.bar_chart,
                         section: "chat",
                     };
                 } else if (newMessage?.response?.result?.pie_chart) {
                     return {
-                        id: newId,
+                        id: message.id,
                         name: "get_pie_chart",
-                        data: newMessage.response.result.pie_chart.chartdata,
+                        chart: newMessage.response.result.pie_chart,
                         section: "chat",
                     };
                 } else if (newMessage?.response?.result?.line_chart) {
                     return {
-                        id: newId,
+                        id: message.id,
                         name: "get_line_chart",
-                        data: newMessage.response.result.line_chart.chartdata,
+                        chart: newMessage.response.result.line_chart,
                         section: "chat",
                     };
                 }
@@ -165,31 +164,29 @@ export const Chat = (props: ChatProps) => {
             });
 
             if (typeof newMessage.response === "object") {
-                const chartObj = getChartObject(newMessage, newId);
+                const chartObj = getChartObject(newMessage);
+
                 if (chartObj) {
                     setCharts([...charts, chartObj]);
                 }
+
+                setBoardSections((prevBoardSections: any) => {
+                    // Create a new item with a unique ID
+                    const newItem = { id: message.id, ...chartObj };
+
+                    // Update the 'chat' section with the new item
+                    return {
+                        ...prevBoardSections,
+                        chat: [...prevBoardSections.chat, newItem],
+                    };
+                });
             }
-
-            // setCharts([...charts, { id: newId, ...DATA, section: "chat" }]);
-
-            // setBoardSections((prevBoardSections) => {
-            //     // Create a new item with a unique ID
-            //     const newItem = { id: newId, ...DATA, section: "chat" };
-
-            //     // Update the 'chat' section with the new item
-            //     return {
-            //         ...prevBoardSections,
-            //         chat: [...prevBoardSections.chat, newItem],
-            //     };
-            // });
         },
     });
 
     const disabled = isLoading || input.length === 0;
 
-    // console.log(charts);
-    // console.log(messages);
+    console.log(messages);
 
     return (
         <div
@@ -249,29 +246,27 @@ export const Chat = (props: ChatProps) => {
                                             ),
                                         }}
                                     >
-                                        {(message as any) && message.content}
+                                        {message && message.content}
                                     </ReactMarkdown>
-
-                                    {(message as any)?.sql && (
+                                    {message?.sql && (
                                         <div className="mb-4">
                                             <h1 className="mt-4">Query:</h1>
                                             <MonacoEditor
                                                 height="100px"
                                                 language="sql"
                                                 theme="dark"
-                                                code={(message as any)?.sql}
+                                                code={message?.sql}
                                                 onChange={handleEditorChange}
                                             />
                                         </div>
                                     )}
 
-                                    {typeof (message as any).chart ===
-                                        "object" && (
-                                        <SortableTaskItem
-                                            id={(message as any)?.id}
-                                        >
+                                    {typeof message.chart === "object" && (
+                                        <SortableTaskItem id={message?.id}>
                                             <ChartComponent
-                                                data={(message as any)?.chart}
+                                                data={
+                                                    message.chart as ChartData
+                                                }
                                             />
                                         </SortableTaskItem>
                                     )}

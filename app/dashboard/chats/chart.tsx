@@ -1,49 +1,18 @@
 import { BarChart, Card, DonutChart, LineChart, Title } from "@tremor/react";
-
-const cities = [
-    {
-        name: "New York",
-        sales: 9800,
-    },
-    {
-        name: "London",
-        sales: 4567,
-    },
-    {
-        name: "Hong Kong",
-        sales: 3908,
-    },
-    {
-        name: "San Francisco",
-        sales: 2400,
-    },
-    {
-        name: "Singapore",
-        sales: 1908,
-    },
-    {
-        name: "Zurich",
-        sales: 1398,
-    },
-];
-
-type Data = {
-    name: string;
-    data: any;
-};
+import { ChartData } from "./chartAtom";
 
 const valueFormatter = (number: number) =>
     `${new Intl.NumberFormat("us").format(number).toString()}`;
 
-export const ChartComponent = ({ data }: { data: Data }) => {
+export const ChartComponent = ({ data }: { data: ChartData }) => {
     const renderChart = () => {
         switch (data.name) {
             case "get_bar_chart":
                 return (
                     <BarChart
                         className="mt-6"
-                        data={(data as any)?.chartdata}
-                        categories={(data as any)?.categories}
+                        data={data.chartdata}
+                        categories={data.categories || []}
                         index="value"
                         valueFormatter={valueFormatter}
                         colors={[
@@ -61,8 +30,8 @@ export const ChartComponent = ({ data }: { data: Data }) => {
                     <DonutChart
                         variant="donut"
                         className="mt-6"
-                        data={(data as any)?.chartdata}
-                        category={(data as any)?.categoty}
+                        data={data.chartdata}
+                        category={data.category}
                         index="name"
                         valueFormatter={valueFormatter}
                         colors={[
@@ -79,8 +48,8 @@ export const ChartComponent = ({ data }: { data: Data }) => {
                 return (
                     <LineChart
                         className="mt-6"
-                        data={(data as any)?.chartdata}
-                        categories={(data as any)?.categories}
+                        data={data.chartdata}
+                        categories={data.categories || []}
                         index="name"
                         valueFormatter={valueFormatter}
                         colors={[
@@ -100,7 +69,6 @@ export const ChartComponent = ({ data }: { data: Data }) => {
     };
 
     if (!data) {
-        // Handle undefined data, maybe render a fallback UI
         return <div>No data available</div>;
     }
 
