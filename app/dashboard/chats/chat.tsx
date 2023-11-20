@@ -142,12 +142,12 @@ export const Chat = (props: ChatProps) => {
                     (msg) => msg.id !== message.id
                 );
 
-                if (typeof newMessage.response === "string") {
+                if (typeof newMessage.response.result === "string") {
                     return [
                         ...filteredMessages,
                         {
                             ...message,
-                            content: newMessage?.response,
+                            content: newMessage?.response.result,
                         },
                     ];
                 } else if (typeof newMessage.response === "object") {

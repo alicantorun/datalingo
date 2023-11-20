@@ -161,7 +161,15 @@ export default function Page() {
                 onDragEnd={handleDragEnd}
             >
                 <h1 className="text-2xl">Dashboard</h1>
-                <div className="grid grid-cols-3 gap-4 h-full">
+                {/*<div className="col-span-1" key={2}>*/}
+                {/*    <BoardSection*/}
+                {/*        isChat={true}*/}
+                {/*        id="chat"*/}
+                {/*        title="Chat"*/}
+                {/*        charts=""*/}
+                {/*    />*/}
+                {/*</div>*/}
+                <div className="grid grid-cols-1 gap-4 h-full">
                     {Object.keys(boardSections).map((boardSectionKey, i) => (
                         <div className="col-span-1" key={boardSectionKey}>
                             <BoardSection
