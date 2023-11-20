@@ -36,21 +36,41 @@ const valueFormatter = (number: number) =>
     `${new Intl.NumberFormat("us").format(number).toString()}`;
 
 export const ChartComponent = ({ data }: { data: Data }) => {
+    console.log("chart data: ", data);
+
     const renderChart = () => {
         switch (data.name) {
+            case "get_bar_chart":
+                return (
+                    <BarChart
+                        className="mt-6"
+                        data={data?.data}
+                        categories={data?.labels}
+                        index="value"
+                        valueFormatter={valueFormatter}
+                        colors={[
+                            "slate",
+                            "violet",
+                            "indigo",
+                            "rose",
+                            "cyan",
+                            "amber",
+                        ]}
+                    />
+                );
             case "get_pie_chart":
                 return (
                     <DonutChart
                         variant="donut"
                         className="mt-6"
-                        data={data?.data?.data}
-                        category="value"
+                        data={data?.data}
+                        category={"value"}
                         index="name"
                         valueFormatter={valueFormatter}
                         colors={[
-                            // "slate",
-                            // "violet",
-                            // "indigo",
+                            "slate",
+                            "violet",
+                            "indigo",
                             "rose",
                             "cyan",
                             "amber",
@@ -61,7 +81,7 @@ export const ChartComponent = ({ data }: { data: Data }) => {
                 return (
                     <LineChart
                         className="mt-6"
-                        data={data?.data?.data}
+                        data={data?.data}
                         categories={["value"]}
                         index="name"
                         valueFormatter={valueFormatter}
@@ -75,24 +95,7 @@ export const ChartComponent = ({ data }: { data: Data }) => {
                         ]}
                     />
                 );
-            case "get_bar_chart":
-                return (
-                    <BarChart
-                        className="mt-6"
-                        data={data?.data?.data}
-                        categories={["Germany", "Italy"]}
-                        index="name"
-                        valueFormatter={valueFormatter}
-                        colors={[
-                            "slate",
-                            "violet",
-                            "indigo",
-                            "rose",
-                            "cyan",
-                            "amber",
-                        ]}
-                    />
-                );
+
             default:
                 return <div>No chart type specified</div>;
         }

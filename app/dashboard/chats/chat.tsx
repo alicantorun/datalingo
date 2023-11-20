@@ -76,56 +76,118 @@ export const Chat = (props: ChatProps) => {
         // sendExtraMessageFields: true,
 
         onFinish: (message) => {
-            console.log("message: ", message);
-
             setContext("");
+
+            // if message.content === typeof string
 
             const newMessage = JSON.parse(message?.content);
 
             const newId = uuidv4();
+
+            const getChartProperty = (newMessage: any) => {
+                if (newMessage?.response?.result?.bar_chart) {
+                    return {
+                        chart: {
+                            ...newMessage.response.result.bar_chart,
+                            name: "get_bar_chart",
+                        },
+                    };
+                } else if (newMessage?.response?.result?.pie_chart) {
+                    return {
+                        chart: {
+                            ...newMessage.response.result.pie_chart,
+                            name: "get_pie_chart",
+                        },
+                    };
+                } else if (newMessage?.response?.result?.line_chart) {
+                    return {
+                        chart: {
+                            ...newMessage.response.result.line_chart,
+                            name: "get_line_chart",
+                        },
+                    };
+                }
+                return {}; // Return an empty object if none of the properties are found
+            };
+
+            const getChartObject = (newMessage: any, newId: string) => {
+                if (newMessage?.response?.result?.bar_chart) {
+                    return {
+                        id: newId,
+                        name: "get_bar_chart",
+                        data: newMessage.response.result.bar_chart.data,
+                        section: "chat",
+                    };
+                } else if (newMessage?.response?.result?.pie_chart) {
+                    return {
+                        id: newId,
+                        name: "get_pie_chart",
+                        data: newMessage.response.result.pie_chart.data,
+                        section: "chat",
+                    };
+                } else if (newMessage?.response?.result?.line_chart) {
+                    return {
+                        id: newId,
+                        name: "get_line_chart",
+                        data: newMessage.response.result.line_chart.data,
+                        section: "chat",
+                    };
+                }
+                return null; // Return null if no chart data is found
+            };
 
             setMessages((prevMessages: any[]): any[] => {
                 const filteredMessages = prevMessages.filter(
                     (msg) => msg.id !== message.id
                 );
 
-                return [
-                    ...filteredMessages,
-                    {
-                        ...message,
-                        content: newMessage?.response,
-                        sql: newMessage?.sql,
-                        function_call: {
-                            id: newId,
-                            name: newMessage?.function_call?.name,
-                            data: newMessage?.function_call?.name
-                                ? JSON.parse(
-                                      newMessage?.function_call?.arguments
-                                  )
-                                : null,
+                if (typeof newMessage.response === "string") {
+                    return [
+                        ...filteredMessages,
+                        {
+                            ...message,
+                            content: newMessage?.response,
                         },
-                    },
-                ];
+                    ];
+                } else if (typeof newMessage.response === "object") {
+                    return [
+                        ...filteredMessages,
+                        {
+                            ...message,
+                            content: "No message content returned from API",
+                            sql: newMessage?.response?.result?.sql_query,
+                            ...getChartProperty(newMessage), // Add the dynamic chart property
+                        },
+                    ];
+                }
             });
 
-            if (newMessage?.function_call?.name) {
-                setCharts([...charts, { id: newId, ...DATA, section: "chat" }]);
-
-                setBoardSections((prevBoardSections) => {
-                    // Create a new item with a unique ID
-                    const newItem = { id: newId, ...DATA, section: "chat" };
-
-                    // Update the 'chat' section with the new item
-                    return {
-                        ...prevBoardSections,
-                        chat: [...prevBoardSections.chat, newItem],
-                    };
-                });
+            if (typeof newMessage.response === "object") {
+                const chartObj = getChartObject(newMessage, newId);
+                if (chartObj) {
+                    setCharts([...charts, chartObj]);
+                }
             }
+
+            // setCharts([...charts, { id: newId, ...DATA, section: "chat" }]);
+
+            // setBoardSections((prevBoardSections) => {
+            //     // Create a new item with a unique ID
+            //     const newItem = { id: newId, ...DATA, section: "chat" };
+
+            //     // Update the 'chat' section with the new item
+            //     return {
+            //         ...prevBoardSections,
+            //         chat: [...prevBoardSections.chat, newItem],
+            //     };
+            // });
         },
     });
 
     const disabled = isLoading || input.length === 0;
+
+    // console.log(charts);
+    // console.log(messages);
 
     return (
         <div
@@ -145,7 +207,7 @@ export const Chat = (props: ChatProps) => {
             </div>
             {messages.length > 0 ? (
                 messages.map((message: any, i: any) => {
-                    console.log(message.content);
+                    console.log("MESSAGE: ", message);
 
                     return (
                         <div
@@ -203,18 +265,13 @@ export const Chat = (props: ChatProps) => {
                                         </div>
                                     )}
 
-                                    {(message as any)?.function_call && (
+                                    {typeof (message as any).chart ===
+                                        "object" && (
                                         <SortableTaskItem
-                                            id={
-                                                (message as any)?.function_call
-                                                    .id
-                                            }
+                                            id={(message as any)?.id}
                                         >
                                             <ChartComponent
-                                                data={
-                                                    (message as any)
-                                                        ?.function_call
-                                                }
+                                                data={(message as any)?.chart}
                                             />
                                         </SortableTaskItem>
                                     )}

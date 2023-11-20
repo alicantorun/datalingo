@@ -1,195 +1,104 @@
-import { kv } from "@vercel/kv";
-import { sql as vercelSQL } from "@vercel/postgres";
-import { Ratelimit } from "@upstash/ratelimit";
-import { ChatOpenAI } from "langchain/chat_models/openai";
+import axios from "axios";
 import {
     Message as VercelChatMessage,
     StreamingTextResponse,
     experimental_StreamData,
-} from "ai";
-
-import {
-    runSqlDatabaseChain,
-    runQuerySql,
-    runSqlAgent,
-    runFunctionCalling,
-    runFunctionCallingWithOpenAI,
-    functions,
-} from "../db/functions";
-import { PromptTemplate } from "langchain/prompts";
-import {
-    generateTableInfoFromTables,
-    getTableAndColumnsName,
-} from "@/app/lib/db";
-import { RunnableSequence } from "langchain/schema/runnable";
-import { StringOutputParser } from "langchain/schema/output_parser";
-
-// export const runtime = "edge";
+} from "ai"; // Ensure that these imports are correct and necessary
 
 const formatMessage = (message: VercelChatMessage) => {
     return `${message.role}: ${message.content}`;
 };
 
-const TEMPLATE = `Based on the provided SQL table schema below, write a SQL query that would answer the user's question.
-------------
-DATABASE SCHEMA:
-{schema}
-------------
-QUESTION:
-{question}
-------------
-CONTEXT:
-{context}
-------------
-CONTEXT EXPLANATION:
-If your question relates to specific tables or columns in the schema, you can provide additional context using the 'context' parameter. For example, if you're inquiring about user-related data but need to consider specific permissions, you can specify which columns or tables should be accessed based on the context provided.
-------------
-SQL QUERY:`;
-
-const FINAL_RESPONSE_TEMPLATE = `Based on the table schema below, question, SQL query, and SQL response, write a natural language response:
-------------
-DATABASE SCHEMA:
-{schema}
-------------
-QUESTION:
-{question}
-------------
-SQL QUERY:
-{query}
-------------
-SQL RESPONSE:
-{response}
-------------
-CONTEXT:
-{context}
-------------
-CONTEXT EXPLANATION:
-If your question relates to specific tables or columns in the schema, you can provide additional context using the 'context' parameter. For example, if you're inquiring about user-related data but need to consider specific permissions, you can specify which columns or tables should be accessed based on the context provided.
-------------
-YOUR EXPLANATION:
-`;
-
 export async function POST(req: Request) {
-    const body = await req.json();
-    const currentChart = body.chart ?? "";
+    try {
+        // Make sure the request body is parsed correctly
+        const body = await req.json();
+        const currentChart = body.chart ?? "";
 
-    const messages = body.messages ?? [];
-    const currentContext = body.context ?? "";
+        const messages = body.messages ?? [];
+        const currentContext = body.context ?? "";
 
-    const formattedPreviousMessages = messages.slice(0, -1).map(formatMessage);
-    const currentMessageContent = messages[messages.length - 1].content;
-    const prompt = PromptTemplate.fromTemplate(TEMPLATE);
+        const formattedPreviousMessages = messages
+            .slice(0, -1)
+            .map(formatMessage);
+        const currentMessageContent = messages[messages.length - 1]?.content; // Added a safety check
 
-    const { sqlTables } = await getTableAndColumnsName();
+        console.log(currentMessageContent);
 
-    const { globalString }: any = await generateTableInfoFromTables(sqlTables);
+        // Ensure the environment variable for DATALINGO_API is set
+        const url = process.env.DATALINGO_API;
+        if (!url) {
+            throw new Error("DATALINGO_API environment variable is not set");
+        }
 
-    const llm = new ChatOpenAI({
-        temperature: 0,
-        openAIApiKey: process.env.OPENAI_API_KEY,
-        // modelName: "gpt-3.5-turbo",
-        modelName: "gpt-4-0613",
-        verbose: true,
-    });
+        // The data you want to send in the POST request
+        const postData = {
+            user_query: currentMessageContent,
+        };
 
-    const sqlQueryChain = RunnableSequence.from([
-        {
-            schema: async () => {
-                const tableInfo = globalString;
+        // Making the POST request using axios
+        // const { data } = await axios.post(url + "/query", postData);
 
-                return tableInfo;
+        // console.log(data);
+
+        // Returning the response from the API
+        return Response.json({
+            // response: data.result,
+            response: {
+                result: {
+                    sql_query: "SELECT month, sales FROM sales_table",
+                    raw_data: {
+                        April: 2500,
+                        August: 3700,
+                        December: 4800,
+                        February: 1800,
+                        January: 2000,
+                    },
+                    bar_chart: {
+                        labels: [
+                            "April",
+                            "August",
+                            "December",
+                            "February",
+                            "January",
+                        ],
+                        data: [
+                            {
+                                name: "Sales",
+                                value: 2500.0,
+                            },
+                            {
+                                name: "Sales",
+                                value: 3700.0,
+                            },
+                            {
+                                name: "Sales",
+                                value: 4800.0,
+                            },
+                            {
+                                name: "Sales",
+                                value: 1800.0,
+                            },
+                            {
+                                name: "Sales",
+                                value: 2000.0,
+                            },
+                        ],
+                    },
+                },
             },
-            question: (input: { question: string; context: string }) => {
-                return input.question;
-            },
-            context: (input: { question: string; context: string }) => {
-                return input.context;
-            },
-        },
-        prompt,
-        llm.bind({ stop: ["\nSQLResult:"] }),
-        new StringOutputParser(),
-    ]);
-
-    const sql = await sqlQueryChain.invoke({
-        question: currentMessageContent,
-        context: currentContext,
-    });
-
-    const finalResponsePrompt = PromptTemplate.fromTemplate(
-        FINAL_RESPONSE_TEMPLATE
-    );
-
-    const finalChain = RunnableSequence.from([
-        {
-            question: (input) => {
-                return input.question;
-            },
-            context: (input) => {
-                return input.context;
-            },
-            query: sqlQueryChain,
-        },
-        {
-            schema: async () => globalString,
-            context: (input) => {
-                return input.context;
-            },
-            question: (input) => input.question,
-            query: (input) => input.query,
-            response: async (input) => {
-                // console.log("input: ", input);
-
-                const response = await vercelSQL.query(input.query);
-
-                const answer = JSON.stringify(response.rows[0]);
-
-                return answer;
-            },
-            constructAndLogPrompt: async (input) => {
-                console.log(input);
-
-                const finalResponsePrompt = PromptTemplate.fromTemplate(
-                    FINAL_RESPONSE_TEMPLATE
-                );
-                const fullPrompt = await finalResponsePrompt.format({
-                    schema: await globalString,
-                    context: input.context,
-                    question: input.question,
-                    query: input.query,
-                    response: await input.response,
-                });
-
-                return { ...input, fullPrompt };
-            },
-        },
-        finalResponsePrompt,
-        llm.bind({
-            functions,
-            // function_call: { name: "get_pie_chart" },
-        }),
-        // llm,
-        new StringOutputParser(),
-    ]);
-
-    const finalResponse = await finalChain.invoke({
-        question: currentMessageContent,
-        context: currentContext,
-    });
-
-    const { additional_kwargs } = await runFunctionCallingWithOpenAI(
-        finalResponse + " get pie chart"
-    );
-
-    console.log({
-        response: finalResponse,
-        sql,
-        function_call: additional_kwargs,
-    });
-
-    return Response.json({
-        response: finalResponse,
-        sql,
-        function_call: additional_kwargs,
-    });
+        });
+    } catch (error: any) {
+        console.log(error);
+        // Handle errors
+        return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            {
+                status: 500,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+    }
 }

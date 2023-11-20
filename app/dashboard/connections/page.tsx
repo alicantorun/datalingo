@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { fetchConnectionsPages, getSchema } from "@/app/lib/data";
 import { Metadata } from "next";
 import { auth } from "@/auth";
+import DataParser from "@/app/ui/connections/schema";
 
 export const metadata: Metadata = {
     title: "Connections",
@@ -51,7 +52,8 @@ export default async function Page({
                     </h1>
                     <CreateSchema email={session?.user?.email} />
                 </div>
-                {JSON.stringify(schema)}
+                {/* {JSON.stringify(schema)} */}
+                <DataParser dataString={schema} />
             </div>
             <div className="mt-5 flex w-full justify-center">
                 <Pagination totalPages={totalPages} />
