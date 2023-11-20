@@ -79,6 +79,7 @@ export const Chat = (props: ChatProps) => {
             setContext("");
 
             const newMessage = JSON.parse(message?.content);
+            console.log(newMessage);
 
             // const newId = uuidv4();
 
@@ -116,21 +117,30 @@ export const Chat = (props: ChatProps) => {
                     return {
                         id: message.id,
                         name: "get_bar_chart",
-                        chart: newMessage.response.result.bar_chart,
+                        chartdata:
+                            newMessage.response.result.bar_chart?.chartdata,
+                        categories:
+                            newMessage.response.result.bar_chart?.categories,
                         section: "chat",
                     };
                 } else if (newMessage?.response?.result?.pie_chart) {
                     return {
                         id: message.id,
                         name: "get_pie_chart",
-                        chart: newMessage.response.result.pie_chart,
+                        chartdata:
+                            newMessage.response.result.pie_chart?.chartdata,
+                        category:
+                            newMessage.response.result.pie_chart?.category,
                         section: "chat",
                     };
                 } else if (newMessage?.response?.result?.line_chart) {
                     return {
                         id: message.id,
                         name: "get_line_chart",
-                        chart: newMessage.response.result.line_chart,
+                        chartdata:
+                            newMessage.response.result.line_chart?.chartdata,
+                        categories:
+                            newMessage.response.result.line_chart?.categories,
                         section: "chat",
                     };
                 }
@@ -142,15 +152,15 @@ export const Chat = (props: ChatProps) => {
                     (msg) => msg.id !== message.id
                 );
 
-                if (typeof newMessage.response === "string") {
+                if (typeof newMessage.response?.result === "string") {
                     return [
                         ...filteredMessages,
                         {
                             ...message,
-                            content: newMessage?.response,
+                            content: newMessage?.response?.result,
                         },
                     ];
-                } else if (typeof newMessage.response === "object") {
+                } else if (typeof newMessage.response?.result === "object") {
                     return [
                         ...filteredMessages,
                         {
@@ -185,8 +195,6 @@ export const Chat = (props: ChatProps) => {
     });
 
     const disabled = isLoading || input.length === 0;
-
-    console.log(messages);
 
     return (
         <div

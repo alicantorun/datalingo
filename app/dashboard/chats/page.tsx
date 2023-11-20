@@ -148,8 +148,10 @@ export default function Page() {
 
     const chart = activeChartId ? getChartById(charts, activeChartId) : null;
 
-    console.log(boardSections);
-    console.log(charts);
+    // console.log(boardSections);
+    // console.log(charts);
+    // console.log(charts);
+    console.log(chart);
 
     return (
         <div className="h-full mx-auto p-4">
@@ -228,6 +230,7 @@ const getChartsBySection = (charts: BoardSectionsChart[], section: Section) => {
 };
 
 const getChartById = (charts: BoardSectionsChart[], id: string) => {
+    console.log(charts);
     return charts.find((chart) => chart.id === id);
 };
 
@@ -258,8 +261,6 @@ const BoardSection = ({
             >
                 <div ref={setNodeRef}>
                     {charts.map((chart) => {
-                        console.log("chart: ", chart);
-
                         return (
                             <div key={chart.id} className="mb-2">
                                 <SortableTaskItem id={chart.id}>
