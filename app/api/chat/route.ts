@@ -47,41 +47,35 @@ export async function POST(req: Request) {
             response: {
                 result: {
                     sql_query: "SELECT month, sales FROM sales_table",
-                    raw_data: {
-                        April: 2500,
-                        August: 3700,
-                        December: 4800,
-                        February: 1800,
-                        January: 2000,
-                    },
+                    raw_data: [
+                        ["April", 2500],
+                        ["August", 3700],
+                        ["December", 4800],
+                        ["February", 1800],
+                        ["January", 2000],
+                    ],
                     bar_chart: {
-                        labels: [
-                            "April",
-                            "August",
-                            "December",
-                            "February",
-                            "January",
-                        ],
-                        data: [
+                        categories: ["Sales"],
+                        chartdata: [
                             {
-                                name: "Sales",
-                                value: 2500.0,
+                                name: "April",
+                                Sales: 2500.0,
                             },
                             {
-                                name: "Sales",
-                                value: 3700.0,
+                                name: "August",
+                                Sales: 3700.0,
                             },
                             {
-                                name: "Sales",
-                                value: 4800.0,
+                                name: "December",
+                                Sales: 4800.0,
                             },
                             {
-                                name: "Sales",
-                                value: 1800.0,
+                                name: "February",
+                                Sales: 1800.0,
                             },
                             {
-                                name: "Sales",
-                                value: 2000.0,
+                                name: "January",
+                                Sales: 2000.0,
                             },
                         ],
                     },
