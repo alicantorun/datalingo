@@ -199,7 +199,7 @@ export type BoardSectionsType = {
     [name: string]: Chart[];
 };
 
-export const initializeBoard = (charts: Chart[]) => {
+const initializeBoard = (charts: Chart[]) => {
     const boardSections: BoardSectionsType = {};
 
     Object.keys(BOARD_SECTIONS).forEach((boardSectionKey) => {
@@ -212,7 +212,7 @@ export const initializeBoard = (charts: Chart[]) => {
     return boardSections;
 };
 
-export const findBoardSectionContainer = (
+const findBoardSectionContainer = (
     boardSections: BoardSectionsType,
     id: string
 ) => {
