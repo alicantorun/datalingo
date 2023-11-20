@@ -138,7 +138,7 @@ export const Chat = (props: ChatProps) => {
                 return null; // Return null if no chart data is found
             };
 
-            setMessages((prevMessages: any[]): any[] => {
+            setMessages((prevMessages: any[]) => {
                 const filteredMessages = prevMessages.filter(
                     (msg) => msg.id !== message.id
                 );
