@@ -35,48 +35,48 @@ export async function POST(req: Request) {
         };
 
         // Making the POST request using axios
-        // const { data } = await axios.post(url + "/query", postData);
+        const { data } = await axios.post(url + "/query", postData);
 
         // Returning the response from the API
         return Response.json({
-            // response: data,
-            response: {
-                result: {
-                    sql_query: "SELECT month, sales FROM sales_table",
-                    raw_data: [
-                        ["April", 2500],
-                        ["August", 3700],
-                        ["December", 4800],
-                        ["February", 1800],
-                        ["January", 2000],
-                    ],
-                    bar_chart: {
-                        categories: ["Sales"],
-                        chartdata: [
-                            {
-                                name: "April",
-                                Sales: 2500.0,
-                            },
-                            {
-                                name: "August",
-                                Sales: 3700.0,
-                            },
-                            {
-                                name: "December",
-                                Sales: 4800.0,
-                            },
-                            {
-                                name: "February",
-                                Sales: 1800.0,
-                            },
-                            {
-                                name: "January",
-                                Sales: 2000.0,
-                            },
-                        ],
-                    },
-                },
-            },
+            response: data,
+            // response: {
+            //     result: {
+            //         sql_query: "SELECT month, sales FROM sales_table",
+            //         raw_data: [
+            //             ["April", 2500],
+            //             ["August", 3700],
+            //             ["December", 4800],
+            //             ["February", 1800],
+            //             ["January", 2000],
+            //         ],
+            //         bar_chart: {
+            //             categories: ["Sales"],
+            //             chartdata: [
+            //                 {
+            //                     name: "April",
+            //                     Sales: 2500.0,
+            //                 },
+            //                 {
+            //                     name: "August",
+            //                     Sales: 3700.0,
+            //                 },
+            //                 {
+            //                     name: "December",
+            //                     Sales: 4800.0,
+            //                 },
+            //                 {
+            //                     name: "February",
+            //                     Sales: 1800.0,
+            //                 },
+            //                 {
+            //                     name: "January",
+            //                     Sales: 2000.0,
+            //                 },
+            //             ],
+            //         },
+            //     },
+            // },
         });
     } catch (error: any) {
         // Handle errors
