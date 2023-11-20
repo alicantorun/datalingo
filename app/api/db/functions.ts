@@ -162,7 +162,6 @@ export const runSqlDatabaseChain = async (input: string) => {
         {
             schema: async () => {
                 const tableInfo = await db.getTableInfo();
-                console.log("table INFO FROM runSqlDatabaseChain: ", tableInfo);
 
                 return tableInfo;
             },
@@ -290,8 +289,6 @@ export const runFunctionCallingWithOpenAI = async (input: string) => {
     // .on("message", (message) => console.log(message));
 
     const finalContent = (await runner).choices[0].message.function_call;
-    console.log();
-    console.log("Final content:", finalContent);
 
     /* Now we can call the model without having to pass the function arguments in again */
     // const result = await model.invoke(["input"]);
@@ -311,8 +308,6 @@ export const runFunctionCalling = async (input: string) => {
 
     /* Now we can call the model without having to pass the function arguments in again */
     const result = await model.invoke(["input"]);
-
-    console.log(result);
 
     return result;
 };

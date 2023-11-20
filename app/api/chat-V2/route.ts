@@ -147,8 +147,6 @@ export async function POST(req: Request) {
                 return answer;
             },
             constructAndLogPrompt: async (input) => {
-                console.log(input);
-
                 const finalResponsePrompt = PromptTemplate.fromTemplate(
                     FINAL_RESPONSE_TEMPLATE
                 );
@@ -180,12 +178,6 @@ export async function POST(req: Request) {
     const { additional_kwargs } = await runFunctionCallingWithOpenAI(
         finalResponse + " get pie chart"
     );
-
-    console.log({
-        response: finalResponse,
-        sql,
-        function_call: additional_kwargs,
-    });
 
     return Response.json({
         response: finalResponse,

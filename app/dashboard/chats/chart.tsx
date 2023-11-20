@@ -36,16 +36,14 @@ const valueFormatter = (number: number) =>
     `${new Intl.NumberFormat("us").format(number).toString()}`;
 
 export const ChartComponent = ({ data }: { data: Data }) => {
-    console.log("chart data: ", data);
-
     const renderChart = () => {
         switch (data.name) {
             case "get_bar_chart":
                 return (
                     <BarChart
                         className="mt-6"
-                        data={data?.data}
-                        categories={data?.labels}
+                        data={(data as any)?.chartdata}
+                        categories={(data as any)?.categories}
                         index="value"
                         valueFormatter={valueFormatter}
                         colors={[
@@ -63,8 +61,8 @@ export const ChartComponent = ({ data }: { data: Data }) => {
                     <DonutChart
                         variant="donut"
                         className="mt-6"
-                        data={data?.data}
-                        category={"value"}
+                        data={(data as any)?.chartdata}
+                        category={(data as any)?.categoty}
                         index="name"
                         valueFormatter={valueFormatter}
                         colors={[
@@ -81,8 +79,8 @@ export const ChartComponent = ({ data }: { data: Data }) => {
                 return (
                     <LineChart
                         className="mt-6"
-                        data={data?.data}
-                        categories={["value"]}
+                        data={(data as any)?.chartdata}
+                        categories={(data as any)?.categories}
                         index="name"
                         valueFormatter={valueFormatter}
                         colors={[

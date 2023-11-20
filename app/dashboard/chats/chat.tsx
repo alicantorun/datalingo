@@ -82,6 +82,8 @@ export const Chat = (props: ChatProps) => {
 
             const newMessage = JSON.parse(message?.content);
 
+            console.log("newMessage: ", newMessage);
+
             const newId = uuidv4();
 
             const getChartProperty = (newMessage: any) => {
@@ -115,21 +117,21 @@ export const Chat = (props: ChatProps) => {
                     return {
                         id: newId,
                         name: "get_bar_chart",
-                        data: newMessage.response.result.bar_chart.data,
+                        data: newMessage.response.result.bar_chart.chartdata,
                         section: "chat",
                     };
                 } else if (newMessage?.response?.result?.pie_chart) {
                     return {
                         id: newId,
                         name: "get_pie_chart",
-                        data: newMessage.response.result.pie_chart.data,
+                        data: newMessage.response.result.pie_chart.chartdata,
                         section: "chat",
                     };
                 } else if (newMessage?.response?.result?.line_chart) {
                     return {
                         id: newId,
                         name: "get_line_chart",
-                        data: newMessage.response.result.line_chart.data,
+                        data: newMessage.response.result.line_chart.chartdata,
                         section: "chat",
                     };
                 }
@@ -207,8 +209,6 @@ export const Chat = (props: ChatProps) => {
             </div>
             {messages.length > 0 ? (
                 messages.map((message: any, i: any) => {
-                    console.log("MESSAGE: ", message);
-
                     return (
                         <div
                             key={i}

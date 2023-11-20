@@ -71,8 +71,6 @@ export async function POST(req: Request) {
         currentMessageContent
     );
 
-    console.log(additional_kwargs);
-
     /**
      * Agent executors don't support streaming responses (yet!), so stream back the
      * complete response one character at a time with a delay to simluate it.
