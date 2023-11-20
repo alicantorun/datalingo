@@ -186,16 +186,16 @@ export default function Page() {
     );
 }
 
-export type Section = "chat" | "dashboard";
+type Section = "chat" | "dashboard";
 
-export type Chart = {
+type Chart = {
     id: string;
     name: string;
     data: any;
     section?: string;
 };
 
-export type BoardSectionsType = {
+type BoardSectionsType = {
     [name: string]: Chart[];
 };
 
@@ -227,21 +227,21 @@ const findBoardSectionContainer = (
     return container;
 };
 
-export const BOARD_SECTIONS = {
+const BOARD_SECTIONS = {
     dashboard: "dashboard",
     demo: "demo",
     chat: "chat",
 };
 
-export const getChartsBySection = (charts: Chart[], section: Section) => {
+const getChartsBySection = (charts: Chart[], section: Section) => {
     return charts.filter((chart) => chart.section === section);
 };
 
-export const getChartById = (charts: Chart[], id: string) => {
+const getChartById = (charts: Chart[], id: string) => {
     return charts.find((chart) => chart.id === id);
 };
 
-export const BoardSection = ({
+const BoardSection = ({
     id,
     title,
     charts,
